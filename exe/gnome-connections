@@ -1,6 +1,24 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
+# Entry point for the Ruby port of GNOME Connections.
+#
+# The options are upstream's, from the OptionEntry[] in src/application.vala:
+#
+#   URL                      the remote desktop to connect to
+#   -F, --file PATH          open a .vnc file at the given PATH
+#   -f, --fullscreen         open in full screen
+#
+# App.parse_arguments is the port of that table; upstream parses it inside its
+# command-line handler, which this port cannot use — see App#initialize.
+
 require "gnome_connections"
 
-GnomeConnections::Application.new.build.run
+App.parse_arguments(ARGV).then do |options|
+  if options[:error]
+    warn options[:error]
+    exit 1
+  end
+
+  App.new(**options.except(:error)).build.run
+end
