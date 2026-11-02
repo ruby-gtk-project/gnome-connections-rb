@@ -21,10 +21,14 @@ in this step.
 - Upstream splits every component across a `.vala` class and a `src/ui/*.ui`
   GtkBuilder template; the two halves are unioned into one `lib/*.rb` per the
   `component-identification` skill.
-- `lib/` on `ruby` currently holds exactly one file of app code
-  (`lib/gnome_connections/application.rb`), a placeholder `Adwaita::StatusPage`
-  saying the port has not been written. **Nothing in the table below exists
-  yet.**
+- **Port status, re-checked on `ruby` at `b76ce03`:** every unit below now has
+  a `lib/*.rb` file with real code (4,481 lines across 25 files), each opening
+  with `# frozen_string_literal: true`, `require 'adwaita'` and a comment
+  naming the upstream file it was ported from. The scaffold placeholder
+  `lib/gnome_connections/application.rb` is gone; `lib/gnome_connections.rb`
+  is now a five-line entry point that requires `lib/main.rb`. The per-unit
+  presence column is the **Port status** table at the end of this file. What
+  remains is parity *within* each unit, not missing units.
 - Target paths follow the pilot port (`gnome-contacts-rb`): flat
   `lib/<thing>.rb`, snake_case, one upstream component per file.
 
@@ -380,7 +384,39 @@ shortcuts window and 5 more handled directly in `on_key_pressed`, 2 menu models
 with 5 items, 1 empty state, 1 loading state and 1 error path (the notification
 bar).
 
-**Present in `lib/` on `ruby`: none of them.** The only app file,
-`lib/gnome_connections/application.rb`, is the scaffold placeholder and will be
-replaced by `lib/main.rb` (or kept as the entry point that requires the new
-flat `lib/*.rb` files, as in the pilot's `lib/gnome_contacts.rb`).
+## Port status
+
+Re-checked against `lib/` on `ruby` at `b76ce03`. Every unit is present; the
+remaining work is per-unit parity, which `component-parity` checks, not the
+creation of new files.
+
+| Upstream file(s) | Target | Kind | Present | Lines |
+|---|---|---|---|---:|
+| `src/main.vala`, `src/application.vala` | `lib/main.rb` | application (actions, About, CLI) | yes | 365 |
+| `src/window.vala`, `src/ui/window.ui` | `lib/window.rb` | window | yes | 288 |
+| `src/topbar.vala`, `src/ui/topbar.ui` | `lib/topbar.rb` | header bars + display menus | yes | 274 |
+| `src/collection-view.vala`, `src/ui/collection-view.ui` | `lib/collection_view.rb` | page (grid of connections) | yes | 185 |
+| `src/collection-view-child.vala`, `src/ui/collection-view-child.ui` | `lib/collection_view_child.rb` | tile / row | yes | 126 |
+| `src/actions-popover.vala` | `lib/actions_popover.rb` | context menu | yes | 78 |
+| `src/assistant.vala`, `src/ui/assistant.ui` | `lib/assistant.rb` | popover (new connection) | yes | 251 |
+| `src/display-view.vala`, `src/ui/display-view.ui` | `lib/display_view.rb` | page (remote display) | yes | 217 |
+| `src/notifications.vala`, `src/ui/notification.ui` | `lib/notifications.rb` | notification bar / error state | yes | 188 |
+| `src/dialogs.vala`, `src/ui/dialog.ui` | `lib/dialogs_window.rb` | dialog (certificate + auth) | yes | 468 |
+| `src/onboarding-dialog.vala`, `src/ui/onboarding-dialog.ui` | `lib/onboarding_dialog.rb` | dialog (first-run carousel) | yes | 225 |
+| `src/onboarding-dialog-page.vala`, `src/ui/onboarding-dialog-page.ui` | `lib/onboarding_dialog_page.rb` | carousel page | yes | 79 |
+| `src/preferences-widgets.vala` | `lib/preferences_widgets.rb` | preferences base + switch row | yes | 170 |
+| `src/vnc-preferences-window.vala`, `src/ui/vnc-preferences.ui` | `lib/vnc_preferences_window.rb` | preferences window | yes | 70 |
+| `src/rdp-preferences-window.vala`, `src/ui/rdp-preferences.ui` | `lib/rdp_preferences_window.rb` | preferences window | yes | 75 |
+| `src/spice-preferences-window.vala`, `src/ui/spice-preferences.ui` | `lib/spice_preferences_window.rb` | preferences window | yes | 51 |
+| `src/ui/kbd-shortcuts-window.ui` | `lib/shortcuts_dialog.rb` | shortcuts dialog | yes | 50 |
+| `src/ui/style.css` | `lib/style.rb` | stylesheet | yes | 88 |
+| `src/connection.vala` | `lib/connection.rb` | model (abstract base) | yes | 442 |
+| `src/vnc-connection.vala` | `lib/vnc_connection.rb` | model + display widget | yes | 177 |
+| `src/rdp-connection.vala` | `lib/rdp_connection.rb` | model + display widget | yes | 146 |
+| `src/spice-connection.vala` | `lib/spice_connection.rb` | model + display widget | yes | 139 |
+| `src/database.vala` | `lib/database.rb` | persistence | yes | 224 |
+| `data/org.gnome.Connections.gschema.xml` | `lib/settings.rb` | settings | yes | 100 |
+| `src/connections.gresource.xml` | — | manifest (SVG art + CSS only) | n/a | — |
+| `po/` (55 locales) | — | translations (`translation-parity` step) | n/a | — |
+| `src/ui/auth-notification.ui` | — | dead upstream template, not ported | n/a | — |
+| `src/ui/fingerprint2-symbolic.svg` | — | orphan resource, not ported | n/a | — |
