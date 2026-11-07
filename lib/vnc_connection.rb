@@ -64,6 +64,17 @@ class VncConnection < Connection
         end
 
         connection.import_vnc_keys(key_file)
+
+        # import_vnc_keys only ever assigns the keys the .vnc file actually
+        # has, each of which saves itself individually; "protocol" is never
+        # among them (the file has no such key — vnc is implied by the class),
+        # so without this a connection imported from a file with only, say, a
+        # Host key would never get a "protocol" row written to connections.db
+        # at all. The next load would then find a group with no protocol key,
+        # log "Unknown protocol defined", and the imported connection would
+        # silently vanish. Saving every persisted property once, outright,
+        # covers that.
+        connection.save
       end
     end
   end

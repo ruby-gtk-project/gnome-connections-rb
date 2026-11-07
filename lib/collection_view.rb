@@ -20,6 +20,11 @@ require_relative 'actions_popover'
 # the ordering are the same either way.
 #
 class CollectionView
+  # Exposed for the drive harness: the tile widgets, in the same order as the
+  # connections they were built from, and the CollectionViewChild wrapper
+  # behind each one (which holds the connection itself).
+  attr_reader :tiles, :children
+
   def initialize
     @children = []
     @tiles = []

@@ -10,6 +10,8 @@ require 'adwaita'
 # dismisses itself after six seconds unless the action is taken first.
 #
 class Notification
+  attr_reader :message
+
   def initialize(message, ok_label: nil, ok: nil, dismiss: nil,
                  timeout: NotificationsBar::DEFAULT_TIMEOUT)
     @message = message
