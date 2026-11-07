@@ -20,11 +20,27 @@ rescue LoadError => error
 end
 
 # External RSpec & related config
-require "kettle/test/rspec"
-# `kettle/test/rspec` installs harness helpers documented in spec/README.md.
+begin
+  require "kettle/test/rspec"
+  # `kettle/test/rspec` installs harness helpers documented in spec/README.md.
+rescue LoadError => error
+  # kettle-test is a declared development dependency (see the gemspec), but
+  # is not always resolvable in every environment this suite runs in (for
+  # example, a Nix dev shell whose gem set was pinned before kettle-test was
+  # added). Degrade instead of aborting the whole run with a LoadError: the
+  # suite falls back to plain RSpec with none of kettle-test's extra harness
+  # helpers, rather than refusing to run at all.
+  raise error unless error.message.include?("kettle")
 
-# This library
-require "gnome/connections/rb"
+  warn "spec_helper: kettle/test/rspec unavailable (#{error.message}); " \
+       "running without its harness helpers."
+end
+
+# This library. The gem is named "gnome-connections-rb" (so its gemspec's
+# version file lives at the conventional lib/gnome/connections/rb/version.rb
+# path), but the application's own entry point is lib/gnome_connections.rb —
+# see that file's comment for why.
+require "gnome_connections"
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure

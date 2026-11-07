@@ -14,6 +14,13 @@ require_relative 'assistant'
 #
 class Topbar
   # Upstream's key_input_action_entries, with the keyvals each one sends.
+  #
+  # Deliberate deviation from upstream: `topbar.vala`'s
+  # `ctrl_alt_fn_activated` allocates `uint[] keyvals = { Control_L, Alt_L, 0 }`
+  # (valid indices 0..2) and its `f3` branch assigns `keyvals[3] = Gdk.Key.F3`,
+  # one past the end, so upstream's Ctrl+Alt+F3 never actually sends F3
+  # (`keyvals[2]` stays 0). This port fixes that bug rather than reproducing
+  # it: `ctrl+alt+f3` below sends `F3` for real.
   KEY_COMBINATIONS = {
     'ctrl+alt+backspace' => %w[Control_L Alt_L BackSpace],
     'ctrl+alt+del'       => %w[Control_L Alt_L Delete],

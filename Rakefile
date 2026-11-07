@@ -170,3 +170,10 @@ rescue LoadError
     warn("NOTE: stone_checksums isn't installed, or is disabled for #{RUBY_VERSION} in the current environment")
   end
 end
+
+### THIS APPLICATION'S OWN TASKS
+
+desc "Drive the app headlessly under Xvfb (test/drive_gnome_connections.rb)"
+task :drive do
+  sh("xvfb-run", "-a", "ruby", File.join(__dir__, "test", "drive_gnome_connections.rb"))
+end
