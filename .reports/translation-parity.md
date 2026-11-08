@@ -4,6 +4,25 @@
 exist in this clone. `origin/master` is the GTK3+libhandy spec version used
 throughout this audit round, consistent with `.reports/component-inventory.md`.)
 
+**Re-verified this round** (after commit `9c27610`, which added `spec/`
+files and root-level ledgers but no `lib/`/`exe/` changes): `grep -rln
+'gettext\|FastGettext\|_(' lib/ exe/` still returns zero matches, and `find
+. -iname '*.po' -not -path './.git/*'` still returns zero files. Nothing
+below has changed since the prior round, and the figures are unchanged.
+
+Also worth recording this round: the new root-level `FINDINGS.md` (added in
+`9c27610`) describes this gap as "`po/` (translations — out of scope per
+this fleet's translation-parity skill)." **That is not what this skill
+says.** `.claude/skills/translation-parity/SKILL.md` states explicitly:
+"Nothing authorises a skip... 'English-only for now' is not a state... There
+are exactly two states: `ported` and `gap`." Calling a 0-of-55-languages
+result "out of scope per the skill" inverts the skill's own instruction —
+the skill is the thing insisting this is counted as a gap, not the thing
+that excuses it. This is flagged in detail in
+`.reports/accountability-ensurance.md` as this round's accountability
+finding; it is noted here too because it is specifically a mischaracterization
+of *this* report's own subject matter.
+
 ## Upstream
 
 - `git ls-tree -r --name-only origin/master | grep '^po/'` → 59 files:

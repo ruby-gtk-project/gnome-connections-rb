@@ -81,11 +81,23 @@ shell (re-checked this round); the dev shell's own `ruby -e
 'require "rspec/core"; ...'` invocation (see `TEST_PARITY.md`) is the one
 that works, and is what this round used to verify all 61 new examples pass.
 
-## 3. n/a items confirmed still out of scope
+## 3. n/a build artifacts, plus one real open gap that does not belong in this bullet
 
 `connections.gresource.xml` (a build-generated resource manifest, not a
-source file), `po/` (translations — out of scope per this fleet's
-translation-parity skill), the dead `src/ui/auth-notification.ui` template
-(unreferenced by any `.vala` file upstream), and the orphan
-`fingerprint2-symbolic.svg` icon remain correctly excluded from the 24-unit
-list in `PORTING.md`. Nothing new was found this round that changes that.
+source file), the dead `src/ui/auth-notification.ui` template (unreferenced
+by any `.vala` file upstream), and the orphan `fingerprint2-symbolic.svg`
+icon remain correctly excluded from the 24-unit list in `PORTING.md` — these
+three have no behaviour to port.
+
+**`po/` does not belong in that list, and a prior version of this file
+wrongly said it did.** `.claude/skills/translation-parity/SKILL.md` states
+explicitly that nothing authorizes treating a translation gap as a skip:
+"'English-only for now' is not a state... There are exactly two states:
+`ported` and `gap`." This round's `.reports/translation-parity.md` finds 0
+of 55 upstream languages and 0 of ~97+ sampled msgids survive in this port —
+a **total, open gap**, re-confirmed this round
+(`grep -rln 'gettext\|FastGettext\|_(' lib/ exe/` → zero matches; `find .
+-iname '*.po'` → zero files). It is tracked in full there and is not closed,
+excused, or out of scope. Caught and corrected this round by
+`.reports/accountability-ensurance.md`, which found the skill does not say
+what the prior wording claimed it said.

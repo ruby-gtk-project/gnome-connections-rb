@@ -1,5 +1,12 @@
 # Component parity — gnome-connections-rb vs. origin/master
 
+**Re-verified this round.** The only changes since the prior round
+(`a64d983`) were `spec/*_spec.rb` and four root-level `.md` ledgers
+(`9c27610`) — no `lib/*.rb` file changed, so the file-by-file findings below
+are re-confirmed rather than re-derived from scratch, and
+`test/drive_gnome_connections.rb` was re-run fresh this session
+(157/157, `DRIVE OK`).
+
 Adversarial spot-check across the units `component-inventory.md` lists,
 reading both the upstream `.vala`/`.ui` and the port `lib/*.rb` side by side
 for each, plus independent re-run of `test/drive_gnome_connections.rb`.
@@ -72,22 +79,29 @@ is still a real behavioral difference from upstream — but it is no longer
 unrecorded. This is the correct resolution: fix the bug, document the
 deviation, do not reproduce a defect just to match upstream byte-for-byte.
 
-## A reconciliation gap: the runtime gate says "21 components," this audit counts 24 units
+## A reconciliation gap: the runtime gate's component count keeps changing, and still does not reconcile
 
-This round's runtime gate is reported as "157 checks passed... covering 21
-components." `component-identification.md` independently derives **24**
-upstream-to-port unit mappings (20 `.vala`-backed files, 2 standalone
-`.ui`/`.css`-backed files, plus the GSettings schema and the database). The
-drive script carries no per-scenario "component" tag of its own, so this
-audit cannot directly confirm which 3 of the 24 identified units the "21
-components" figure excludes, or whether it is just counting differently
-(e.g. grouping `main.rb`'s application+window-bootstrap role out, or not
-counting `lib/style.rb`/`lib/gnome/connections/rb/version.rb` as
-"components"). Per this audit's mandate to treat a narrow drive run as its
-own gap: **this is flagged as unreconciled, not waved through as
-presumably-fine.** Whoever computes the "21 components" figure for the gate
-should state which 21, so this can be checked against the 24-unit list
-above rather than compared as two bare numbers.
+The prior audit round's gate reported "157 checks passed... covering 21
+components." **This round's gate reports the same 157 checks covering 26
+components** — a different count, for the same drive script, over a period
+in which zero `lib/*.rb` files were added, removed, or renamed (confirmed
+this round: `git diff ec3297b..HEAD -- lib/` touches no file under `lib/`
+except through unrelated commits, and `ls lib/*.rb` is unchanged in count).
+`component-identification.md` independently derives **24** upstream-to-port
+unit mappings (20 `.vala`-backed files, 2 standalone `.ui`/`.css`-backed
+files, plus the GSettings schema and the database) — a figure that has not
+moved between rounds either. The drive script carries no per-scenario
+"component" tag of its own (`grep -n component test/drive_gnome_connections.rb`
+→ no matches, re-checked this round), so this audit still cannot trace "21"
+or "26" to anything inside this repository, and now has direct evidence that
+whatever produces that number is not a stable function of this port's actual
+file list. Per this audit's mandate to treat a narrow or unverifiable drive
+run as its own gap: **this is flagged as unreconciled for a second
+consecutive round, with the discrepancy now sharper (a number that changed
+with no corresponding code change) rather than resolved.** Whoever computes
+the "components" figure for the gate should state which N files it means,
+every round, so it can be checked against the fixed 24-unit list above
+instead of compared as two bare, drifting numbers.
 
 ## Verified against a live run, not just source reading
 

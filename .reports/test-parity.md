@@ -7,99 +7,126 @@
 directory, no Meson `test()` targets, nothing. So "every upstream test is
 ported" is **vacuously true**: 0 of 0. This is not itself a port gap.
 
-## The port's own RSpec harness: the crash is fixed, but it still has zero tests
+## The port's RSpec harness: previously a 0-example shell, now real coverage — re-verified fresh this round
 
-- `spec/` holds exactly two files: `spec_helper.rb` and `README.md`. **Zero
-  `*_spec.rb` files exist anywhere in the repository.**
-- **Re-checked this round, after commit `ec3297b`** (made in response to the
-  prior audit round's finding that the banner's own command crashed):
-  running the dev shell's printed command exactly as printed —
-  `xvfb-run -a ruby -e 'require "rspec/core"; exit
-  RSpec::Core::Runner.run(["--format", "progress", "--require",
-  "spec_helper", "spec"])'` — now produces:
+The prior two audit rounds tracked this gap through three states:
+1. (two rounds ago) the dev shell's own banner command crashed outright.
+2. (one round ago, commit `ec3297b`) the crash was fixed, but `spec/` still
+   held zero `*_spec.rb` files — a suite that runs but proves nothing. That
+   round's report refused to credit "the crash is fixed" as "there is
+   coverage."
+3. (this round, commit `9c27610`) four real spec files were added.
 
-  ```
-  spec_helper: kettle/test/rspec unavailable (cannot load such file -- kettle/test/rspec); running without its harness helpers.
-  No examples found.
-  Finished in 0.00709 seconds (files took 6.13 seconds to load)
-  0 examples, 0 failures
-  ```
+This round re-ran the exact invocation from scratch rather than trusting the
+commit message:
 
-  `spec_helper.rb` now rescues the unresolvable `kettle/test/rspec` require
-  and warns instead of raising, so the banner's own command no longer
-  errors out of the box. **This is a genuine, verified fix** of the specific
-  defect the prior round reported — re-run fresh this session, not taken on
-  faith.
-- `bundle exec rspec` still fails the same way it did before this round's
-  fix: `can't find executable rspec for gem rspec-core. rspec-core is not
-  currently included in the bundle` (re-verified this session). The bundle
-  the dev shell hands you still cannot run the *conventional* invocation,
-  only the banner's own `ruby -e ...` form. This is a smaller, second-order
-  gap worth recording on its own: a contributor who types the Ruby-standard
-  `bundle exec rspec` instead of copying the banner's exact one-liner still
-  hits a wall.
-- **The actual gap that remains, and it is still a gap, not progress toward
-  closing it: zero spec files exist.** Fixing the loader so it degrades
-  gracefully means the suite now *runs*, but running a suite with 0
-  examples is not test coverage — it is a harness with nothing in it. No
-  `*_spec.rb` file was added in `ec3297b` or any other commit on this
-  branch. The RSpec suite remains **0 of 0 tests, by omission, not by
-  design** — there is no claim anywhere that RSpec is deliberately unused
-  in favor of the drive script; `spec/README.md` and the gemspec's
-  `kettle-test` dependency both imply RSpec is meant to carry real
-  coverage. Treat "the crash is fixed" and "there is test coverage" as two
-  separate claims — only the first is true.
+```
+nix develop --command xvfb-run -a ruby -e 'require "rspec/core"; exit RSpec::Core::Runner.run(["--format", "progress", "--require", "spec_helper", "spec"])'
+```
+
+Result, this session:
+
+```
+spec_helper: kettle/test/rspec unavailable (cannot load such file -- kettle/test/rspec); running without its harness helpers.
+...
+61 examples, 0 failures
+```
+
+`spec/` now holds:
+
+| File | Class under test | Coverage |
+|---|---|---|
+| `spec/credentials_spec.rb` | `Credentials` (`lib/connection.rb`) | lookup/store/delete round-trip, `0600` file mode, `.compact`-ing nil fields, corrupt-JSON recovery |
+| `spec/settings_spec.rb` | `Settings` (`lib/settings.rb`) | defaults, `first_run=`/`window_size=` persistence round-trip, type coercion, `apply_to`/`remember`, corrupt-JSON recovery |
+| `spec/connection_spec.rb` | `Connection` (`lib/connection.rb`), via `VncConnection` | uri parse/join, `visible_name`, property-change observers, `while_loading`, save-to-database, credential storage, `handle_auth`, abstract-method contract |
+| `spec/database_spec.rb` | `Database` (`lib/database.rb`) | `.protocols`, `get_connections`/`get_connection`, `add_connection` per scheme, `find_connection_by_uri`, `delete_connection`, property round-trip |
+
+This is a genuine, re-verified close of the prior round's headline finding:
+the suite is no longer "present in name only." It covers the model and
+persistence layer with real assertions (`expect`, not just "does not raise"),
+including corrupt-input and round-trip cases. **61 of 61 examples pass,
+re-run cold this session, not taken from the commit message.**
+
+- `bundle exec rspec` (the conventional invocation) still fails the same way
+  as every prior round: `can't find executable rspec for gem rspec-core.
+  rspec-core is not currently included in the bundle` (re-verified this
+  session). Only the dev shell's own `ruby -e ...RSpec::Core::Runner.run...`
+  form works. This second-order gap is unchanged and still open: a
+  contributor who types the Ruby-standard `bundle exec rspec` instead of
+  copying the banner's exact one-liner still hits a wall. `TEST_PARITY.md`
+  (new this round) documents the working form; it does not fix the
+  underlying `bundle exec rspec` failure.
+- **What the new specs do not cover**: no widget/view/dialog class
+  (`lib/window.rb`, `lib/topbar.rb`, `lib/collection_view.rb`,
+  `lib/dialogs_window.rb`, the three preferences windows, etc.) has an
+  RSpec example. That is by design — those need a GTK main loop, which is
+  the drive script's job, not RSpec's — but it means "RSpec passes" says
+  nothing about any of the 19 widget-backed `lib/*.rb` files. Only the drive
+  script (below) exercises those.
 
 ## The suite that actually exercises the port is `test/drive_gnome_connections.rb`
 
-This is a hand-written, non-RSpec driver that pumps GTK's main loop and
-asserts against the live widget tree. It is not what either upstream or the
-port's own `spec/README.md` calls "the tests", but it is the thing doing
-real verification work here, so it is audited on its own terms:
+Re-run fresh this session (not reused from a prior round's log):
 
-- Ran it fresh this session:
-  `nix develop --command xvfb-run -a ruby test/drive_gnome_connections.rb`
-  → **157 of 157 checks passed, `DRIVE OK`**, confirming the runtime gate
-  figure given for this round.
-- It is a single long script (50 numbered scenarios, `[0]`–`[49]`), covering:
-  onboarding carousel, empty state, the new-connection assistant (VNC/RDP
-  default/switch), search/filter, opening a connection and its VNC-unavailable
-  fallback, the notification bar and its dismissal, the display header bar
-  and back/disconnect, the three preferences windows, the actions popover and
-  delete-with-undo, certificate verification/change/authentication dialogs
-  (including credential round-trip through the credential store and `.vnc`
-  file import), CLI argument parsing, keyboard shortcuts (`F1`, `F11`,
-  `Ctrl+Q`, `win.show-help-overlay`), the About dialog's fields, window-size
-  settings persistence, and shutdown/quit.
-- This is a genuinely broad functional sweep — not a shallow smoke test — and
-  it is real, demonstrated coverage, which is why `drive_ok=true` is treated
-  in this audit as meaningful rather than a self-reported number taken on
-  faith.
-- **Caveat the harness itself documents**: no `gtk-vnc`, `gtk-frdp`, or
-  `spice-gtk` typelib exists in this dev environment, so every actual remote
-  desktop session necessarily fails over to the "protocol unavailable" error
-  path. The driver *tests that the fallback behaves correctly* — it cannot
-  and does not test an actual VNC/RDP/SPICE session succeeding, because no
-  environment in this fleet can provide one. That is an honestly-labeled
-  environment ceiling, not a suite gap, but it does mean "157 checks passed"
-  does not include "a remote desktop was displayed."
-- **Re-checked this round**: a `rake drive` task was added in `ec3297b`
-  (`task :drive do sh("xvfb-run", "-a", "ruby", ...) end` in the `Rakefile`).
-  Running `nix develop --command bash -lc 'rake drive'` reproduces the same
-  **157 of 157 checks, `DRIVE OK`** this session. The "not wired into rake"
-  gap the prior round recorded is closed. It is still a single monolithic
-  script rather than a suite split by scenario, and `rake drive` is not
-  `rake test`/`rake spec`/`rake default` — a contributor running the
-  project's conventional `rake test` or `rake` still gets nothing that
-  exercises this script — but it is now discoverable via `rake -T` rather
-  than only via the script's own header comment.
+```
+nix develop --command xvfb-run -a ruby test/drive_gnome_connections.rb
+```
+
+→ **157 of 157 checks passed, `DRIVE OK`**, confirming the runtime gate
+figure given for this round. Also re-ran via `rake drive`
+(`nix develop --command bash -lc 'rake drive'`) — same 157/157 — confirming
+the Rakefile wiring from `ec3297b` still works after this round's changes.
+
+It is a single long script (50 numbered scenarios, `[0]`–`[49]`), covering:
+onboarding carousel, empty state, the new-connection assistant (VNC/RDP
+default/switch), search/filter, opening a connection and its VNC-unavailable
+fallback, the notification bar and its dismissal, the display header bar and
+back/disconnect, the three preferences windows, the actions popover and
+delete-with-undo, certificate verification/change/authentication dialogs
+(including credential round-trip and `.vnc` file import), CLI argument
+parsing, keyboard shortcuts (`F1`, `F11`, `Ctrl+Q`,
+`win.show-help-overlay`), the About dialog's fields, window-size settings
+persistence, and shutdown/quit.
+
+**Caveat the harness itself documents, re-confirmed this round**: no
+`gtk-vnc`, `gtk-frdp`, or `spice-gtk` typelib exists anywhere in this fleet's
+Nix store (re-checked with `find /nix/store -iname "*vnc*.typelib" ...`,
+returns nothing — see `FINDINGS.md`), so every actual remote-desktop session
+necessarily falls over to the "protocol unavailable" path. The driver tests
+that the fallback behaves correctly; it cannot and does not test an actual
+VNC/RDP/SPICE session succeeding, because no environment in this fleet can
+provide one. "157 checks passed" does not include "a remote desktop was
+displayed," in this run or any run this port could produce here.
+
+## The runtime gate's component count does not reconcile with this audit's unit count
+
+This round's gate reports "157 checks passed... covering 26 components."
+`.reports/component-identification.md` independently derives **24**
+upstream-to-port file-level units (confirmed again this round — no `lib/*.rb`
+file was added or removed since that count was taken; only `spec/*.rb` and
+root-level `.md` ledgers changed). `test/drive_gnome_connections.rb` itself
+carries no per-scenario "component" tag anywhere in its source
+(`grep -n component test/drive_gnome_connections.rb` → no matches), so
+neither "26" nor the prior round's "21" can be traced to anything in this
+repository. Two different rounds, two different numbers, neither reconciled
+to a concrete list, for a port whose own file-level unit count has not
+changed. This is flagged again, by name, rather than treated as a rounding
+difference: **a drive run's "N components" figure is not verifiable from
+inside this repository and should not be taken as a precise coverage claim
+until something in `test/` actually emits a component list.**
 
 ## Verdict
 
 - Upstream test parity: trivially met (0 upstream tests).
-- Port's declared RSpec suite: **a gap** — present in name only, backed by a
-  broken dependency, zero examples, and a banner command that fails as
-  printed. Report this plainly rather than crediting it as "present."
-- Port's actual verification (`test/drive_gnome_connections.rb`): substantial
-  and independently re-run this session with the claimed 157/157 result
-  confirmed, with the VNC/RDP/SPICE-unavailable caveat noted above.
+- Port's RSpec suite: **closed as a gap this round** — real spec files,
+  real assertions, 61/61 passing, re-verified cold. `bundle exec rspec`
+  remains broken as a convenience path (minor, documented, open).
+- Port's widget/view/dialog layer: **not covered by RSpec at all, only by
+  the drive script** — worth stating plainly rather than letting "61
+  examples, 0 failures" read as broader than it is.
+- Port's actual UI verification (`test/drive_gnome_connections.rb`):
+  substantial, independently re-run this session, 157/157 confirmed, with
+  the VNC/RDP/SPICE-unavailable caveat unchanged.
+- The gate's "26 components" figure: **unreconciled**, same open issue as
+  last round's "21," now with a different number and still no source for
+  either inside this repository.

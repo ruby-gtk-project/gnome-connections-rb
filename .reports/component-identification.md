@@ -1,5 +1,11 @@
 # Component identification — audit note
 
+**Re-verified this round**: `ls lib/*.rb` and the nested
+`lib/gnome/connections/rb/version.rb` are unchanged in count and name since
+the prior round's identification pass; only `spec/*_spec.rb` and
+root-level `.md` ledgers were added. The 24-unit mapping below still holds
+with no re-derivation needed beyond confirming no `lib/` file moved.
+
 `.reports/component-inventory.md` (422 lines, dated to `ruby` at `b76ce03`)
 already is the component-identification deliverable for this port, and it is
 thorough: per-file widget/CSS/signal/action tables for all 15 user-facing
