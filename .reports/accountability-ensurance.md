@@ -54,30 +54,42 @@ stop describing the gap in the reassuring vocabulary of an environment
 constraint, because that vocabulary is exactly what lets the next reader
 file "no remote desktop works" as closed instead of outstanding.
 
-## Finding 2 — the `ctrl+alt+f3` fix is an unmarked, unexplained deviation
+## Finding 2 — the `ctrl+alt+f3` fix was an unmarked deviation; now fixed, re-verified
 
-`component-parity.md` (this round) found that `lib/topbar.rb` quietly fixes
-upstream's out-of-bounds `ctrl_alt_fn_activated` bug for `F3` rather than
-reproducing or flagging it. Nothing in `lib/topbar.rb` says so. This is not
-an excuse-language hit (no sentence claims it was a reasoned choice) — it is
-the opposite failure the skill does not cover: a real deviation from
-upstream behaviour with *no record at all*, reasoned or otherwise. Noted
-here because an audit that only hunts for over-explained gaps would miss an
-under-explained one sitting right next to them.
+The prior round found that `lib/topbar.rb` quietly fixed upstream's
+out-of-bounds `ctrl_alt_fn_activated` bug for `F3` with no record of the
+deviation at all. **Re-checked this round**: commit `ec3297b` added a
+comment directly above `KEY_COMBINATIONS` naming the exact upstream bug and
+stating the port fixes it deliberately rather than reproducing it. Read the
+current file to confirm the comment is actually there, not just claimed in
+a commit message — it is (`lib/topbar.rb` lines 17–23). This finding is
+closed: the behaviour still deviates from upstream (correctly, by fixing a
+real upstream bug), and now the deviation is on the record where a future
+reader will see it.
 
 ## Finding 3 — the test-parity "157 of 157" claim is accurate, re-verified, not a false green
 
 Checked specifically because the task calls a false green "the most serious
 finding you can make": the number was re-run from a cold checkout this
-session, not taken from a stale report or a cached log, and came back
-identical (157/157, `DRIVE OK`). It is a true green — qualified by Finding 1
-above (it is green for everything the drive script actually exercises, which
-does not include a working remote session, because nothing in the port can
-produce one). The RSpec suite the dev shell's own banner names, by contrast,
-*is* a false-green risk if left unexamined: it looks like test
-infrastructure, and failed outright when run
-(`.reports/test-parity.md`). Recording this so neither number is cited
-without its caveat in the future.
+session (both the raw `xvfb-run -a ruby test/drive_gnome_connections.rb`
+invocation and, now, `rake drive`), not taken from a stale report or a
+cached log, and came back identical (157/157, `DRIVE OK`) both times. It is
+a true green — qualified by Finding 1 above (it is green for everything the
+drive script actually exercises, which does not include a working remote
+session, because nothing in the port can produce one).
+
+**Re-checked this round**: the prior round's RSpec false-green risk has
+*partly* been addressed and partly remains. `spec_helper.rb`'s crash on the
+dev shell's own banner command is fixed (re-run fresh this session: `0
+examples, 0 failures`, no error), so it is no longer a suite that "fails
+outright when run." But a suite with the crash fixed and zero `*_spec.rb`
+files is its own, quieter false-green risk: `rake -T`-style discovery (once
+`kettle-dev` is available) or a CI badge reading "tests: passing" off a
+0-example RSpec run would report green for a suite that pins nothing. This
+report does not let "the crash is fixed" round up to "RSpec provides
+coverage" — see `.reports/test-parity.md` for the full, re-verified
+breakdown. Recording this explicitly so the next reader does not take
+"0 failures" as "passing" for a suite that has no tests in it.
 
 ## What is clean
 
@@ -97,9 +109,30 @@ without its caveat in the future.
   is fully present — a legitimate substitution with identical observable
   behaviour, not a gap wearing a design label.
 
+## No `PORTING.md`, `TEST_PARITY.md`, `COMPONENT_PARITY.md`, or `FINDINGS.md` at the repo root
+
+The `test-parity` and `component-parity` skills both describe a ledger file
+at the port's root (`TEST_PARITY.md`, `COMPONENT_PARITY.md`) as "the
+contract" and "the source of truth," separate from this round's `.reports/`
+documents. None of the four exists in this repository — checked this round
+with `ls PORTING.md TEST_PARITY.md COMPONENT_PARITY.md FINDINGS.md`, all
+missing. This round's audit (`.reports/*.md`) stands in for them in
+practice, but a point-in-time audit report is not a maintained ledger: it is
+not updated as new work lands, and nothing enforces that the next change
+touches it. This is itself worth naming rather than silently treating
+`.reports/` as equivalent to the ledger the skills ask for.
+
 ## Verdict
 
-One real excuse-pattern finding (the VNC/RDP/SPICE display ceiling, written
-in the voice of settled architecture across three files and two other
-reports in this round) and one unmarked deviation (`ctrl+alt+f3`). Both are
-now on record in this document, not softened in the ones above it.
+One real excuse-pattern finding that remains fully open (the VNC/RDP/SPICE
+display ceiling — no remote desktop ever renders, in any environment, and
+three source files plus two other reports in this round describe that in
+the calm vocabulary of a settled architectural decision rather than as
+outstanding work). One prior unmarked deviation (`ctrl+alt+f3`) that has
+been fixed and is now closed, re-verified by reading the current file, not
+by trusting the commit message. One partially-closed false-green risk (the
+RSpec harness no longer crashes, but still pins zero tests, which is its own
+quieter false-green if read as "passing"). One missing-ledger observation
+(no `PORTING.md`/`TEST_PARITY.md`/`COMPONENT_PARITY.md`/`FINDINGS.md`,
+despite the skills treating those as the contract). All are on record here,
+not softened in the sections above.

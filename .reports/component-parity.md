@@ -58,15 +58,36 @@ never actually sends F3** (`keyvals[2]` stays `0`).
 
 `lib/topbar.rb`'s `KEY_COMBINATIONS` instead lists
 `'ctrl+alt+f3' => %w[Control_L Alt_L F3]` — the port's Ctrl+Alt+F3 **does**
-send F3. The inventory flags the upstream bug's existence but the port
-silently fixes it rather than reproducing it or noting the deviation inline.
-This is almost certainly the right behavior to ship, but it is a real,
-observable difference from upstream (a user pressing the Ctrl+Alt+F3 menu
-item gets a working key combination in the port and a broken one upstream),
-and it was not called out as a deliberate fix anywhere in `lib/topbar.rb`'s
-comments or in the inventory's own notes beyond naming the bug. Minor, but
-worth recording rather than letting "ported faithfully" quietly mean
-"ported, except where upstream was obviously wrong."
+send F3. This is a real, observable difference from upstream (a user
+pressing the Ctrl+Alt+F3 menu item gets a working key combination in the
+port and a broken one upstream).
+
+**Re-checked this round**: as of commit `ec3297b` (after the prior audit
+round flagged this as an *undocumented* deviation), `lib/topbar.rb` now
+carries an explicit "Deliberate deviation from upstream" comment directly
+above `KEY_COMBINATIONS`, naming the exact out-of-bounds bug
+(`keyvals[3] = Gdk.Key.F3` on a 3-element array) and stating that the port
+fixes it rather than reproducing it. The deviation itself still stands — it
+is still a real behavioral difference from upstream — but it is no longer
+unrecorded. This is the correct resolution: fix the bug, document the
+deviation, do not reproduce a defect just to match upstream byte-for-byte.
+
+## A reconciliation gap: the runtime gate says "21 components," this audit counts 24 units
+
+This round's runtime gate is reported as "157 checks passed... covering 21
+components." `component-identification.md` independently derives **24**
+upstream-to-port unit mappings (20 `.vala`-backed files, 2 standalone
+`.ui`/`.css`-backed files, plus the GSettings schema and the database). The
+drive script carries no per-scenario "component" tag of its own, so this
+audit cannot directly confirm which 3 of the 24 identified units the "21
+components" figure excludes, or whether it is just counting differently
+(e.g. grouping `main.rb`'s application+window-bootstrap role out, or not
+counting `lib/style.rb`/`lib/gnome/connections/rb/version.rb` as
+"components"). Per this audit's mandate to treat a narrow drive run as its
+own gap: **this is flagged as unreconciled, not waved through as
+presumably-fine.** Whoever computes the "21 components" figure for the gate
+should state which 21, so this can be checked against the 24-unit list
+above rather than compared as two bare numbers.
 
 ## Verified against a live run, not just source reading
 
@@ -86,6 +107,16 @@ No missing window, dialog, menu, action, or state found beyond what
 detail (down to reproducing a dead, upstream-only CSS class and a specific
 `.vnc`-file trailing-space key bug on the *fix* side while documenting the
 fix) that reads as deliberate, checked work rather than a confident
-approximation. The two items above — the VNC/RDP/SPICE display ceiling and
-the undocumented Ctrl+Alt+F3 fix — are the only parity notes this audit
-found, and neither is hidden; both are now on record.
+approximation.
+
+The one component-level finding that remains outstanding, and is the most
+important thing in this report: **the VNC/RDP/SPICE display ceiling is a
+real functional gap, not a cosmetic one.** No code path in this port, in any
+environment this fleet can run in, ever renders a remote desktop — every
+connection falls back to "protocol unavailable." That is this application's
+entire reason to exist upstream. It is documented (three file headers, this
+report, `.reports/accountability-ensurance.md`) and exercised as the
+expected fallback by the drive harness, so it is not hidden — but
+"documented" and "exercised as a fallback" are not the same as "present,"
+and this report does not round that up to a pass. The Ctrl+Alt+F3 fix is
+now documented and closed as a finding.

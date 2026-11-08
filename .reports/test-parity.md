@@ -7,35 +7,48 @@
 directory, no Meson `test()` targets, nothing. So "every upstream test is
 ported" is **vacuously true**: 0 of 0. This is not itself a port gap.
 
-## But the port's own RSpec harness is dead, unrun scaffolding
+## The port's own RSpec harness: the crash is fixed, but it still has zero tests
 
 - `spec/` holds exactly two files: `spec_helper.rb` and `README.md`. **Zero
   `*_spec.rb` files exist anywhere in the repository.**
-- The dev shell's own printed banner names a command to "run the specs":
-  `ruby -e 'require "rspec/core"; exit RSpec::Core::Runner.run([...])'`.
-  Running it exactly as printed:
+- **Re-checked this round, after commit `ec3297b`** (made in response to the
+  prior audit round's finding that the banner's own command crashed):
+  running the dev shell's printed command exactly as printed —
+  `xvfb-run -a ruby -e 'require "rspec/core"; exit
+  RSpec::Core::Runner.run(["--format", "progress", "--require",
+  "spec_helper", "spec"])'` — now produces:
 
   ```
-  LoadError: cannot load such file -- kettle/test/rspec
-  # ./spec/spec_helper.rb:23:in '<top (required)>'
+  spec_helper: kettle/test/rspec unavailable (cannot load such file -- kettle/test/rspec); running without its harness helpers.
   No examples found.
-  Finished in 0.00006 seconds
-  0 examples, 0 failures, 2 errors occurred outside of examples
+  Finished in 0.00709 seconds (files took 6.13 seconds to load)
+  0 examples, 0 failures
   ```
 
-  `spec_helper.rb` unconditionally `require "kettle/test/rspec"`, and that
-  gem is not resolvable in the dev shell's load path even though
-  `gnome-connections-rb.gemspec` declares `kettle-test` (`~> 2.0`) as a
-  development dependency.
-- `bundle exec rspec` fails even earlier: `can't find executable rspec for
-  gem rspec-core. rspec-core is not currently included in the bundle`. The
-  bundle the dev shell hands you cannot run RSpec at all, by either the
-  banner's own invocation or the conventional one.
-- Net result: **this suite has never been executed successfully, and could
-  not be if it were run** — not "0 specs, intentionally", but "0 specs,
-  behind a broken loader, with a banner command that errors out of the box."
-  Per this audit's mandate, that is reported as a gap, not waved through
-  because upstream also has nothing to port.
+  `spec_helper.rb` now rescues the unresolvable `kettle/test/rspec` require
+  and warns instead of raising, so the banner's own command no longer
+  errors out of the box. **This is a genuine, verified fix** of the specific
+  defect the prior round reported — re-run fresh this session, not taken on
+  faith.
+- `bundle exec rspec` still fails the same way it did before this round's
+  fix: `can't find executable rspec for gem rspec-core. rspec-core is not
+  currently included in the bundle` (re-verified this session). The bundle
+  the dev shell hands you still cannot run the *conventional* invocation,
+  only the banner's own `ruby -e ...` form. This is a smaller, second-order
+  gap worth recording on its own: a contributor who types the Ruby-standard
+  `bundle exec rspec` instead of copying the banner's exact one-liner still
+  hits a wall.
+- **The actual gap that remains, and it is still a gap, not progress toward
+  closing it: zero spec files exist.** Fixing the loader so it degrades
+  gracefully means the suite now *runs*, but running a suite with 0
+  examples is not test coverage — it is a harness with nothing in it. No
+  `*_spec.rb` file was added in `ec3297b` or any other commit on this
+  branch. The RSpec suite remains **0 of 0 tests, by omission, not by
+  design** — there is no claim anywhere that RSpec is deliberately unused
+  in favor of the drive script; `spec/README.md` and the gemspec's
+  `kettle-test` dependency both imply RSpec is meant to carry real
+  coverage. Treat "the crash is fixed" and "there is test coverage" as two
+  separate claims — only the first is true.
 
 ## The suite that actually exercises the port is `test/drive_gnome_connections.rb`
 
@@ -70,10 +83,16 @@ real verification work here, so it is audited on its own terms:
   environment in this fleet can provide one. That is an honestly-labeled
   environment ceiling, not a suite gap, but it does mean "157 checks passed"
   does not include "a remote desktop was displayed."
-- It is also a single monolithic script run manually, not wired into `rake`,
-  CI, or any task a contributor would discover without reading
-  `test/drive_gnome_connections.rb`'s own header comment. There is no
-  `rake drive` or equivalent.
+- **Re-checked this round**: a `rake drive` task was added in `ec3297b`
+  (`task :drive do sh("xvfb-run", "-a", "ruby", ...) end` in the `Rakefile`).
+  Running `nix develop --command bash -lc 'rake drive'` reproduces the same
+  **157 of 157 checks, `DRIVE OK`** this session. The "not wired into rake"
+  gap the prior round recorded is closed. It is still a single monolithic
+  script rather than a suite split by scenario, and `rake drive` is not
+  `rake test`/`rake spec`/`rake default` — a contributor running the
+  project's conventional `rake test` or `rake` still gets nothing that
+  exercises this script — but it is now discoverable via `rake -T` rather
+  than only via the script's own header comment.
 
 ## Verdict
 
